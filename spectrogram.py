@@ -56,6 +56,7 @@ class Spectrogram:
             # The following is for appending a text file with the spec_exmpl_array data to build up a test set for our
             # model. It also includes y values for the corresponding examples by reading the file name of song we
             # imported to get this data
+            data_array = None
             if self.contains_vocals:
                 # If examples come from a song with vocals (y = 1)
                 data_array = np.ones((spec_exmpl_array.shape[0], spec_exmpl_array.shape[1] + 1))
