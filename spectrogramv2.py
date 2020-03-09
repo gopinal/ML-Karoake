@@ -65,28 +65,44 @@ class Spectrogram:
         # The following is for appending a text file with the spec_exmpl_array data to build up a test set for our
         # model. It also includes y values for the corresponding examples by reading the file name of song we
         # imported to get this data
-        data_array = None
+        self.data_array = None
+        
         if self.contains_vocals:
             # If examples come from a song with vocals (y = 1)
-            data_array = np.ones((spec_exmpl_array.shape[0], spec_exmpl_array.shape[1] + 1))
+            self.data_array = np.ones((spec_exmpl_array.shape[0], spec_exmpl_array.shape[1] + 1))
         else:
             # If examples come from a song with no vocals (y = 0)
-            data_array = np.zeros((spec_exmpl_array.shape[0], spec_exmpl_array.shape[1] + 1))
+            self.data_array = np.zeros((spec_exmpl_array.shape[0], spec_exmpl_array.shape[1] + 1))
 
-        data_array[:, :-1] = spec_exmpl_array  # Now data_array is our X with the y column attached at the end
-        filename = 'data_matrix_500ms.txt'
-        with open(filename, mode='a') as data_file:
-            np.savetxt(data_file, data_array)
-
-    def get_X_Y(self):
-        # Read the array we stored in the textfile
-        with open(filename, mode='r') as data_file:  # Mode 'r' is for reading
-            loaded_data_array = np.loadtxt(data_file)
+        self.data_array[:, :-1] = spec_exmpl_array  # Now data_array is our X with the y column attached at the end
+        
+    def get_X(self):
         # To feed into a neural network, we'd use:
-        self.X = loaded_data_array[:, :-1]
-        self.y = loaded_data_array[:, loaded_data_array.shape[1] - 1]
-        return (self.X,self.y)
+        self.X = self.data_array[:, :-1]
+        return (self.X)
+    
+    def get_Y(self):
+        # To feed into a neural network, we'd use:
+        self.Y = self.data_array[:, self.data_array.shape[1] - 1]
+        return (self.Y)   
+        
+        ###The following was used for generating and reading text files with unrolled STFT data###
+            
+    #   data_array[:, :-1] = spec_exmpl_array  # Now data_array is our X with the y column attached at the end
+    #   filename = audio_file
+    #   with open(filename, mode='w') as data_file: #mode='a' is for appending to a text file, 'w' overwrites existing files
+    #       np.savetxt(data_file, data_array)
 
+    #def get_X_Y(self):
+    #    # Read the array we stored in the textfile
+    #    with open(filename, mode='r') as data_file:  # Mode 'r' is for reading
+    #        loaded_data_array = np.loadtxt(data_file)
+    #    # To feed into a neural network, we'd use:
+    #    self.X = loaded_data_array[:, :-1]
+    #    self.y = loaded_data_array[:, loaded_data_array.shape[1] - 1]
+    #    return (self.X,self.y)
+
+        ###END###
 
     def plot_spectrogram(self):
         plt.pcolormesh(self.t, self.f, np.abs(self.spec), vmin=0, vmax=abs(np.amax(self.spec)))  # cmap='gray')
