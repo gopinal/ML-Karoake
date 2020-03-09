@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8" />
-<title>spectrogram</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
+<title>gendataset</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
 
 <style type="text/css">
@@ -11773,166 +11773,199 @@ div#notebook {
 
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[70]:</div>
+<div class="prompt input_prompt">In&nbsp;[11]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># Importing libraries we&#39;ll need to make spectrograms--all are available with Anaconda3 installation except soundfile</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="k">import</span> <span class="n">Audio</span>
-<span class="c1"># Used for importing sound files in wav format; installed in command prompt with: pip install soundfile</span>
-<span class="kn">import</span> <span class="nn">soundfile</span> <span class="k">as</span> <span class="nn">sf</span>
-<span class="kn">from</span> <span class="nn">scipy.fftpack</span> <span class="k">import</span> <span class="n">fft</span>
-<span class="kn">from</span> <span class="nn">scipy.io</span> <span class="k">import</span> <span class="n">wavfile</span>
-<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">signal</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">array</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">reshape</span>  <span class="c1"># needed for re-rolling vectors into matrices</span>
-<span class="kn">import</span> <span class="nn">warnings</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1">###How to use this script###</span>
 
+<span class="c1">#Parameters:</span>
 
-<span class="k">class</span> <span class="nc">Spectrogram</span><span class="p">:</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">audio_file</span><span class="p">,</span> <span class="n">contains_vocals</span><span class="p">):</span>
-        <span class="c1"># contains_vocals is a boolean that specifies whether the songs has vocals (true) or is a karaoke (false)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">contains_vocals</span> <span class="o">=</span> <span class="n">contains_vocals</span>
+<span class="c1">#DIR = the directory containing your songs; should be either instrumentals or vocal+instruments from the test or training set</span>
+<span class="c1">#contains_vocals = 1 if the songs have vocals, 0 if they&#39;re instrumentals and don&#39;t have vocals</span>
+<span class="c1">#n_samples = 24505 for test set, 46200 for training set</span>
 
-        <span class="c1"># Importing audio files, with PySoundFile: https://pysoundfile.readthedocs.io/en/0.8.1/</span>
-        <span class="c1"># According to our tutorial, we want our samples to be sound files 500 ms long</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">song_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_rate</span> <span class="o">=</span> <span class="n">sf</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">audio_file</span><span class="p">)</span>
+<span class="c1">#You need the latest spectrogram.py to use this script. For the variable DIR, you will specify the directory where your </span>
+<span class="c1">#music files are.</span>
 
-        <span class="c1"># sample_rate is an integer, denoting the sampling frequency in Hz of the song (i.e. the time resolution of the</span>
-        <span class="c1"># song_data). song_data is an n-column array, where rows represent signal amplitude at a unit of time,</span>
-        <span class="c1"># and each column represents a channel. For stereo songs there are two channels, hence two columns. For ease of</span>
-        <span class="c1"># processing, we&#39;ll turn</span>
-        <span class="c1"># stereo songs into mono songs:</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">song_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">song_data</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">song_data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span>
-                         <span class="bp">self</span><span class="o">.</span><span class="n">song_data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span>  <span class="c1"># Averages out each channel in stereo song into a mono channel</span>
-            <span class="c1"># We want to segment our song files into individual examples of 500 ms; the following will</span>
-            <span class="c1"># generate these examples:</span>
-        <span class="n">seconds</span> <span class="o">=</span> <span class="n">song_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_rate</span> <span class="c1">#Total number of seconds in song</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">seconds</span><span class="o">*</span><span class="mi">2</span><span class="p">)</span> <span class="c1">#Number of examples we&#39;ll make, each 500 ms, from song data we loaded</span>
-
-        <span class="n">pxl_per_samp</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">song_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="n">seconds</span><span class="o">*</span><span class="mi">2</span><span class="p">))</span> <span class="c1">#Pixels per sample--think of our data as an image</span>
-       
-        <span class="n">song_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span><span class="n">pxl_per_samp</span><span class="p">))</span>
-             
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)):</span>
-            <span class="n">song_array</span><span class="p">[</span><span class="n">i</span><span class="p">,:]</span> <span class="o">=</span> <span class="n">song_data</span><span class="p">[</span><span class="n">i</span><span class="o">*</span><span class="n">pxl_per_samp</span><span class="p">:(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">pxl_per_samp</span><span class="p">]</span>
-            
-        <span class="c1"># Scipy methods for doing (inverse) short-time fourier transforms, or STFT,</span>
-        <span class="c1"># (that is to reproduce our song from STFT)</span>
-        <span class="n">L</span> <span class="o">=</span> <span class="mi">1024</span>
-        <span class="n">noverlap</span> <span class="o">=</span> <span class="mi">4</span> <span class="c1">#The hop-size is L/noverlap = 256</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">stft</span><span class="p">(</span><span class="n">song_array</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="n">fs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_rate</span><span class="p">,</span> <span class="n">nperseg</span><span class="o">=</span><span class="n">L</span><span class="p">,</span> <span class="n">noverlap</span><span class="o">=</span><span class="n">noverlap</span><span class="p">)</span>
-        
-        <span class="bp">self</span><span class="o">.</span><span class="n">spec_exmpl_3D_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">)))</span>
-        
-        <span class="c1">#The following loop builds a 3D array from the spectra generated for each 500 ms sample from the song </span>
-        
-        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)):</span>
-            <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">stft</span><span class="p">(</span><span class="n">song_array</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:],</span> <span class="n">fs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_rate</span><span class="p">,</span> <span class="n">nperseg</span><span class="o">=</span><span class="n">L</span><span class="p">,</span> <span class="n">noverlap</span><span class="o">=</span><span class="n">noverlap</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">spec_exmpl_3D_array</span><span class="p">[</span><span class="n">i</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span>
-        <span class="c1">#spec is an array of dimensions (len(f), len(t)), the rows being along the frequency axis</span>
-        
-        <span class="c1"># f is a list containing the frequencies that will be plotted, size of 513 with L = 1024 and hop size = 256</span>
-        <span class="c1"># t is a list containing the units of time where data will be plotted, size of 88 for 500 ms long samples</span>
-        
-        
-        <span class="c1">###The following lines are for unrolling the STFT into one row###</span>
-        <span class="c1">#spec_exmpl_array = np.zeros(shape=(n, len(self.f) * len(self.t)))</span>
-        
-        <span class="c1">#for i in range(0, (n - 1)):</span>
-        <span class="c1">#    _, _, self.spec = signal.stft(song_array[i, :], fs=self.sample_rate, nperseg=L, noverlap=noverlap)</span>
-        <span class="c1">#    # spec is an array of dimensions (len(f), len(t)), the rows being along the frequency axis</span>
-        <span class="c1">#    spec_exmpl_array[i, :] = self.spec.ravel()  # Unrolls spectrogram of example and puts it into array</span>
-        <span class="c1">#####</span>
-        
-        
-        <span class="c1"># The following is for appending a text file with the spec_exmpl_array data to build up a test set for our</span>
-        <span class="c1"># model. It also includes y values for the corresponding examples by reading the file name of song we</span>
-        <span class="c1"># imported to get this data</span>
-        
-        <span class="c1">#data_array = None</span>
-        <span class="c1">#if self.contains_vocals:</span>
-            <span class="c1"># If examples come from a song with vocals (y = 1)</span>
-        <span class="c1">#    data_array = np.ones((spec_exmpl_array.shape[0], spec_exmpl_array.shape[1] + 1))</span>
-        <span class="c1">#else:</span>
-            <span class="c1"># If examples come from a song with no vocals (y = 0)</span>
-        <span class="c1">#    data_array = np.zeros((spec_exmpl_array.shape[0], spec_exmpl_array.shape[1] + 1))</span>
-
-        <span class="c1">#data_array[:, :-1] = spec_exmpl_array  # Now data_array is our X with the y column attached at the end</span>
-        <span class="c1">#filename = &#39;data_matrix_500ms.txt&#39;</span>
-        <span class="c1">#with open(filename, mode=&#39;a&#39;) as data_file:</span>
-        <span class="c1">#    np.savetxt(data_file, data_array)</span>
-        
-    <span class="k">def</span> <span class="nf">get_X</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1"># To feed into a neural network, we&#39;d use:</span>
-        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec_exmpl_3D_array</span><span class="p">)</span>
-    
-    <span class="k">def</span> <span class="nf">get_Y</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1"># To feed into a neural network, we&#39;d use:</span>
-        <span class="n">data_array</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">contains_vocals</span><span class="p">:</span>
-            <span class="c1"># If examples come from a song with vocals (y = 1)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># If examples come from a song with no vocals (y = 0)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">)</span>   
-
-        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Y</span><span class="p">)</span>   
-
-        <span class="c1">#Haven&#39;t tried the following functions since we&#39;ve updated this class to make 3D arrays rather than unrolled 2D arrays</span>
-
-    <span class="k">def</span> <span class="nf">plot_spectrogram</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">pcolormesh</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="p">),</span> <span class="n">vmin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="p">)))</span>  <span class="c1"># cmap=&#39;gray&#39;)</span>
-        <span class="c1"># Previous line sets the scale of intensity for heat map</span>
-
-        <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">f</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;STFT Magnitude&#39;</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Frequency [Hz]&#39;</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Time [sec]&#39;</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">yscale</span><span class="p">(</span><span class="s1">&#39;symlog&#39;</span><span class="p">,</span> <span class="n">linthreshy</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-        <span class="k">return</span>
-
-    <span class="c1"># Plots the fourier transform of the whole song snippet</span>
-    <span class="k">def</span> <span class="nf">plot_fourier</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">song_data</span>
-
-        <span class="n">fourier_transform</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">fft</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># Normalized?</span>
-        <span class="n">fourier_transform</span> <span class="o">=</span> <span class="n">fourier_transform</span><span class="p">[</span><span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))]</span>  <span class="c1"># Exclude sampling frequency</span>
-
-        <span class="n">tp_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-        <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">tp_count</span> <span class="o">/</span> <span class="mi">2</span><span class="p">))</span>
-        <span class="n">time_period</span> <span class="o">=</span> <span class="n">tp_count</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_rate</span>
-        <span class="n">frequencies</span> <span class="o">=</span> <span class="n">values</span> <span class="o">/</span> <span class="n">time_period</span>
-
-        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Fourier transform depicting the frequency components&#39;</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">frequencies</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="n">fourier_transform</span><span class="p">))</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Frequency&#39;</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Amplitude&#39;</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">xscale</span><span class="p">(</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-        <span class="k">return</span>
-
-    <span class="k">def</span> <span class="nf">plot_signal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">ts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">song_data</span>
-        <span class="n">total_ts_sec</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_rate</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The total time series length = </span><span class="si">{}</span><span class="s2"> sec (N points = </span><span class="si">{}</span><span class="s2">) &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">total_ts_sec</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">)))</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ts</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_rate</span><span class="p">),</span>
-                   <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_rate</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Amplitude&quot;</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Time (second)&quot;</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span>
-            <span class="s2">&quot;The total length of time series = </span><span class="si">{}</span><span class="s2"> sec, sample_rate = </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_rate</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_rate</span><span class="p">))</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-        <span class="k">return</span>
+<span class="c1">#The end product of the script is the two complete arrays of X and Y generated from all the songs in the specified folder.</span>
+<span class="c1">#X will be a [n_samples x 513 x 23] 3D array</span>
+<span class="c1">#Y will be an [n_samples] vector (specifically for Python, a list)</span>
 </pre></div>
 
 </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[2]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1">#Python3 code to read multiple file names in a directory or folder to write </span>
+<span class="c1">#References: https://stackoverflow.com/questions/2632205/how-to-count-the-number-of-files-in-a-directory-using-python</span>
+<span class="c1">#https://www.geeksforgeeks.org/rename-multiple-files-using-python/</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[3]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="kn">from</span> <span class="nn">spectrogram</span> <span class="k">import</span> <span class="n">Spectrogram</span> <span class="c1">#Importing the class Tuan made. You should have spectrogram.py in the same</span>
+                                                                                    <span class="c1">#directory as this script</span>
+<span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">os.path</span> <span class="c1">#Needed for reading file names directly from folder</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[10]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1">#The directory where your songs are stored</span>
+<span class="n">DIR</span> <span class="o">=</span> <span class="s2">&quot;C:/Users/numbe/Documents/Academics/Coursework/CS 129 - Machine Learning/Final Project/musdb18/test/Instrumental Versions&quot;</span>
+
+<span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">DIR</span><span class="p">)</span> <span class="c1">#Sets working directory to where song files are; this is so we can load them and write the dataset file in there</span>
+
+<span class="c1">#The line below makes a list of all the filenames in the specified directory, while excluding names of subdirectories/folders</span>
+<span class="n">filename_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">name</span><span class="p">)]</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Processing songs from:&#39;</span><span class="o">+</span><span class="n">DIR</span><span class="p">)</span>
+
+<span class="c1">#########################################</span>
+<span class="c1">#For test set, n_samples = 24505</span>
+<span class="c1">#For training set, n_samples = 46200</span>
+<span class="n">freq_size</span> <span class="o">=</span> <span class="mi">513</span>
+<span class="n">time_size</span> <span class="o">=</span> <span class="mi">23</span>
+<span class="n">n_samples</span> <span class="o">=</span> <span class="mi">24505</span>
+<span class="c1">#These are dimensions of the matrix [X, Y]</span>
+<span class="c1">#########################################</span>
+
+<span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_samples</span><span class="p">,</span><span class="n">freq_size</span><span class="p">,</span><span class="n">time_size</span><span class="p">))</span>
+<span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_samples</span><span class="p">))</span>
+<span class="n">n_samples_so_far</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1">#This will ensure we are indexing correctly to put the x for our sample into our X matrix of all songs&#39; data</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">filename_list</span><span class="p">)):</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">filename_list</span><span class="p">[</span><span class="n">i</span><span class="p">];</span> <span class="c1">#Iterates through each file name in the list</span>
+        
+        <span class="nb">print</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        
+        <span class="n">contains_vocals</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">#If the songs are instrumental/karaoke, it should be 0; if it has vocals, value should be 1</span>
+        <span class="n">spect</span> <span class="o">=</span> <span class="n">Spectrogram</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span><span class="n">contains_vocals</span><span class="p">)</span> <span class="c1">#Calling the Spectrogram class. This is what creates/updates our dataset textfile</span>
+        <span class="n">x_is</span> <span class="o">=</span> <span class="n">spect</span><span class="o">.</span><span class="n">get_X</span><span class="p">()</span> <span class="c1">#numpy array data type</span>
+        <span class="n">y_is</span> <span class="o">=</span> <span class="n">spect</span><span class="o">.</span><span class="n">get_Y</span><span class="p">()</span> <span class="c1">#numpy array data type</span>
+        
+        <span class="n">n_song_samples</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">y_is</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="c1">#I.e., how many samples did we make from the song (song length (sec)*2, since 500ms segments used)</span>
+        
+        <span class="n">upper_index</span> <span class="o">=</span> <span class="n">n_samples_so_far</span> <span class="o">+</span> <span class="n">n_song_samples</span> <span class="c1">#Each sample is a row in our array/matrix</span>
+        
+        <span class="n">X</span><span class="p">[</span><span class="n">n_samples_so_far</span><span class="p">:</span><span class="n">upper_index</span><span class="p">,:,:]</span> <span class="o">=</span> <span class="n">x_is</span> <span class="c1">#Puts in values of samples from song into the matrix [X,Y] of all samples</span>
+        <span class="n">Y</span><span class="p">[</span><span class="n">n_samples_so_far</span><span class="p">:</span><span class="n">upper_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">y_is</span> <span class="c1">#^^^</span>
+        
+        <span class="n">n_samples_so_far</span> <span class="o">=</span> <span class="n">n_samples_so_far</span> <span class="o">+</span> <span class="n">n_song_samples</span> <span class="c1">#Updates how many samples we&#39;ve done so far</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Processing songs from:C:/Users/numbe/Documents/Academics/Coursework/CS 129 - Machine Learning/Final Project/musdb18/test/Instrumental Versions
+AM Contra - Heart Peripheral.stem.wav
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stderr output_text">
+<pre>C:\Users\numbe\Anaconda3\testingspectrogram\spectrogram.py:61: ComplexWarning: Casting complex values to real discards the imaginary part
+  self.spec_exmpl_3D_array[i,:,:] = self.spec
+</pre>
+</div>
+</div>
+
+<div class="output_area">
+
+<div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>Angels In Amplifiers - I&#39;m Alright.stem.wav
+Arise - Run Run Run.stem.wav
+Ben Carrigan - We&#39;ll Talk About It All Tonight.stem.wav
+BKS - Bulldozer.stem.wav
+BKS - Too Much.stem.wav
+Bobby Nobody - Stitch Up.stem.wav
+Buitraker - Revo X.stem.wav
+Carlos Gonzalez - A Place For Us.stem.wav
+Cristina Vane - So Easy.stem.wav
+Detsky Sad - Walkie Talkie.stem.wav
+Enda Reilly - Cur An Long Ag Seol.stem.wav
+Forkupines - Semantics.stem.wav
+Georgia Wonder - Siren.stem.wav
+Girls Under Glass - We Feel Alright.stem.wav
+Hollow Ground - Ill Fate.stem.wav
+James Elder &amp; Mark M Thompson - The English Actor.stem.wav
+Juliet&#39;s Rescue - Heartbeats.stem.wav
+Little Chicago&#39;s Finest - My Own.stem.wav
+Louis Cressy Band - Good Time.stem.wav
+Lyndsey Ollard - Catching Up.stem.wav
+M.E.R.C. Music - Knockout.stem.wav
+Moosmusic - Big Dummy Shake.stem.wav
+Motor Tapes - Shore.stem.wav
+Mu - Too Bright.stem.wav
+Nerve 9 - Pray For The Rain.stem.wav
+PR - Happy Daze.stem.wav
+PR - Oh No.stem.wav
+Punkdisco - Oral Hygiene.stem.wav
+Raft Monk - Tiring.stem.wav
+Sambasevam Shanmugam - Kaathaadi.stem.wav
+Secretariat - Borderline.stem.wav
+Secretariat - Over The Top.stem.wav
+Side Effects Project - Sing With Me.stem.wav
+Signe Jakobsen - What Have You Done To Me.stem.wav
+Skelpolu - Resurrection.stem.wav
+Speak Softly - Broken Man.stem.wav
+Speak Softly - Like Horses.stem.wav
+The Doppler Shift - Atrophy.stem.wav
+The Easton Ellises (Baumi) - SDRNR.stem.wav
+The Easton Ellises - Falcon 69.stem.wav
+The Long Wait - Dark Horses.stem.wav
+The Mountaineering Club - Mallory.stem.wav
+The Sunshine Garcia Band - For I Am The Moon.stem.wav
+Timboz - Pony.stem.wav
+Tom McKenzie - Directions.stem.wav
+Triviul feat. The Fiend - Widow.stem.wav
+We Fell From The Sky - Not You.stem.wav
+Zeno - Signs.stem.wav
+</pre>
+</div>
+</div>
+
 </div>
 </div>
 

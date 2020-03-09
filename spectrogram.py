@@ -38,55 +38,79 @@ class Spectrogram:
             # We want to segment our song files into individual examples of 500 ms; the following will
             # generate these examples:
         seconds = song_data.shape[0]/self.sample_rate #Total number of seconds in song
-        n = int(seconds*2) #Number of examples we'll make, each 500 ms, from song data we loaded
+        self.n = int(seconds*2) #Number of examples we'll make, each 500 ms, from song data we loaded
 
         pxl_per_samp = round(song_data.shape[0]/(seconds*2)) #Pixels per sample--think of our data as an image
        
-        song_array = np.zeros(shape=(n,pxl_per_samp))
+        song_array = np.zeros(shape=(self.n,pxl_per_samp))
              
-        for i in range(0,(n-1)):
+        for i in range(0,(self.n-1)):
             song_array[i,:] = song_data[i*pxl_per_samp:(i+1)*pxl_per_samp]
             
         # Scipy methods for doing (inverse) short-time fourier transforms, or STFT,
         # (that is to reproduce our song from STFT)
         L = 1024
-        noverlap = 4
-        # we take a slice for STFT is 3*L/4
-        self.f, self.t, _ = signal.stft(song_array[0, :], fs=self.sample_rate, nperseg=L, noverlap=noverlap)
+        noverlap = 4 #The hop-size is L/noverlap = 256
 
+        self.f, self.t, _ = signal.stft(song_array[0, :], fs=self.sample_rate, nperseg=L, noverlap=noverlap)
+        
+        self.spec_exmpl_3D_array = np.zeros(shape=(self.n, len(self.f), len(self.t)))
+        
+        #The following loop builds a 3D array from the spectra generated for each 500 ms sample from the song 
+        
+        for i in range(0, (self.n - 1)):
+            _, _, self.spec = signal.stft(song_array[i, :], fs=self.sample_rate, nperseg=L, noverlap=noverlap)
+            self.spec_exmpl_3D_array[i,:,:] = self.spec
+        #spec is an array of dimensions (len(f), len(t)), the rows being along the frequency axis
+        
         # f is a list containing the frequencies that will be plotted, size of 513 with L = 1024 and hop size = 256
         # t is a list containing the units of time where data will be plotted, size of 88 for 500 ms long samples
-        spec_exmpl_array = np.zeros(shape=(n, len(self.f) * len(self.t)))
-        for i in range(0, (n - 1)):
-            _, _, self.spec = signal.stft(song_array[i, :], fs=self.sample_rate, nperseg=L, noverlap=noverlap)
-            # spec is an array of dimensions (len(f), len(t)), the rows being along the frequency axis
-            spec_exmpl_array[i, :] = self.spec.ravel()  # Unrolls spectrogram of example and puts it into array
-
+        
+        
+        ###The following lines are for unrolling the STFT into one row###
+        #spec_exmpl_array = np.zeros(shape=(n, len(self.f) * len(self.t)))
+        
+        #for i in range(0, (n - 1)):
+        #    _, _, self.spec = signal.stft(song_array[i, :], fs=self.sample_rate, nperseg=L, noverlap=noverlap)
+        #    # spec is an array of dimensions (len(f), len(t)), the rows being along the frequency axis
+        #    spec_exmpl_array[i, :] = self.spec.ravel()  # Unrolls spectrogram of example and puts it into array
+        #####
+        
+        
         # The following is for appending a text file with the spec_exmpl_array data to build up a test set for our
         # model. It also includes y values for the corresponding examples by reading the file name of song we
         # imported to get this data
+        
+        #data_array = None
+        #if self.contains_vocals:
+            # If examples come from a song with vocals (y = 1)
+        #    data_array = np.ones((spec_exmpl_array.shape[0], spec_exmpl_array.shape[1] + 1))
+        #else:
+            # If examples come from a song with no vocals (y = 0)
+        #    data_array = np.zeros((spec_exmpl_array.shape[0], spec_exmpl_array.shape[1] + 1))
+
+        #data_array[:, :-1] = spec_exmpl_array  # Now data_array is our X with the y column attached at the end
+        #filename = 'data_matrix_500ms.txt'
+        #with open(filename, mode='a') as data_file:
+        #    np.savetxt(data_file, data_array)
+        
+    def get_X(self):
+        # To feed into a neural network, we'd use:
+        return (self.spec_exmpl_3D_array)
+    
+    def get_Y(self):
+        # To feed into a neural network, we'd use:
         data_array = None
         if self.contains_vocals:
             # If examples come from a song with vocals (y = 1)
-            data_array = np.ones((spec_exmpl_array.shape[0], spec_exmpl_array.shape[1] + 1))
+            self.Y = np.ones(self.n)
         else:
             # If examples come from a song with no vocals (y = 0)
-            data_array = np.zeros((spec_exmpl_array.shape[0], spec_exmpl_array.shape[1] + 1))
+            self.Y = np.zeros(self.n)   
 
-        data_array[:, :-1] = spec_exmpl_array  # Now data_array is our X with the y column attached at the end
-        filename = 'data_matrix_500ms.txt'
-        with open(filename, mode='a') as data_file:
-            np.savetxt(data_file, data_array)
+        return (self.Y)   
 
-    def get_X_Y(self):
-        # Read the array we stored in the textfile
-        with open(filename, mode='r') as data_file:  # Mode 'r' is for reading
-            loaded_data_array = np.loadtxt(data_file)
-        # To feed into a neural network, we'd use:
-        self.X = loaded_data_array[:, :-1]
-        self.y = loaded_data_array[:, loaded_data_array.shape[1] - 1]
-        return (self.X,self.y)
-
+        #Haven't tried the following functions since we've updated this class to make 3D arrays rather than unrolled 2D arrays
 
     def plot_spectrogram(self):
         plt.pcolormesh(self.t, self.f, np.abs(self.spec), vmin=0, vmax=abs(np.amax(self.spec)))  # cmap='gray')
