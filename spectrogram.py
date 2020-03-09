@@ -78,20 +78,15 @@ class Spectrogram:
         with open(filename, mode='a') as data_file:
             np.savetxt(data_file, data_array)
 
-    def get_x(self):
+    def get_X_Y(self):
         # Read the array we stored in the textfile
         with open(filename, mode='r') as data_file:  # Mode 'r' is for reading
             loaded_data_array = np.loadtxt(data_file)
         # To feed into a neural network, we'd use:
         self.X = loaded_data_array[:, :-1]
-        return self.X
-
-    def get_y(self):
-        # Read the array we stored in the textfile
-        with open(filename, mode='r') as data_file:  # Mode 'r' is for reading
-            loaded_data_array = np.loadtxt(data_file)
         self.y = loaded_data_array[:, loaded_data_array.shape[1] - 1]
-        return self.y
+        return (self.X,self.y)
+
 
     def plot_spectrogram(self):
         plt.pcolormesh(self.t, self.f, np.abs(self.spec), vmin=0, vmax=abs(np.amax(self.spec)))  # cmap='gray')
