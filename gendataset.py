@@ -1,84 +1,60 @@
+# The end product of the script is the two complete arrays of X and Y generated from all the songs in
+# the specified folder.
+# X will be a [n_samples x 513 x 23] 3D array
+# Y will be an [n_samples] vector (specifically for Python, a list)
 
-# coding: utf-8
+# Python3 code to read multiple file names in a directory or folder to write
+# References: https://stackoverflow.com/questions/2632205/how-to-count-the-number-of-files-in-a-directory-using-python
+# https://www.geeksforgeeks.org/rename-multiple-files-using-python/
 
-# In[11]:
-
-
-###How to use this script###
-
-#Parameters:
-
-#DIR = the directory containing your songs; should be either instrumentals or vocal+instruments from the test or training set
-#contains_vocals = 1 if the songs have vocals, 0 if they're instrumentals and don't have vocals
-#n_samples = 24505 for test set, 46200 for training set
-
-#You need the latest spectrogram.py to use this script. For the variable DIR, you will specify the directory where your 
-#music files are.
-
-#The end product of the script is the two complete arrays of X and Y generated from all the songs in the specified folder.
-#X will be a [n_samples x 513 x 23] 3D array
-#Y will be an [n_samples] vector (specifically for Python, a list)
-
-
-# In[2]:
-
-
-#Python3 code to read multiple file names in a directory or folder to write 
-#References: https://stackoverflow.com/questions/2632205/how-to-count-the-number-of-files-in-a-directory-using-python
-#https://www.geeksforgeeks.org/rename-multiple-files-using-python/
-
-
-# In[3]:
-
-
-from spectrogram import Spectrogram #Importing the class Tuan made. You should have spectrogram.py in the same
-                                                                                    #directory as this script
-import os, os.path #Needed for reading file names directly from folder
+from spectrogram import Spectrogram
+import os.path
 import numpy as np
 
 
-# In[10]:
+# user_dir is the directory where your songs are stored
+# contains_vocals is whether it is a directory of karaoke songs (false) or a directory of full songs (true)
+# user_dir = "C:/Users/numbe/Documents/Academics/Coursework/CS 129 - " \
+#      "Machine Learning/Final Project/musdb18/test/Instrumental Versions"#
+class Gendataset:
+    def __init__(self, user_dir, contains_vocals):
+        os.chdir(user_dir)
+        # The line below makes a list of all the filenames in the specified directory,
+        # while excluding names of subdirectories/folders
+        self.filename_list = [name for name in os.listdir('.') if os.path.isfile(name)]
+        print('Processing songs from:' + user_dir)
+        # For test set, n_samples = 24505
+        # For training set, n_samples = 46200
+        freq_size = 513
+        time_size = 23
+        n_samples = 24505
+        # These are dimensions of the matrix [X, Y]
 
+        self.X = np.zeros((n_samples, freq_size, time_size))
+        self.Y = np.zeros(n_samples)
+        # This will ensure we are indexing correctly to put the x for our sample into our X matrix of all songs' data
+        n_samples_so_far = 0
+        for i in range(1, len(self.filename_list)):
+            filename = self.filename_list[i]  # Iterates through each file name in the list
+            print(filename)
 
-#The directory where your songs are stored
-DIR = "C:/Users/numbe/Documents/Academics/Coursework/CS 129 - Machine Learning/Final Project/musdb18/test/Instrumental Versions"
+            self.contains_vocals = contains_vocals
+            spect = Spectrogram(filename, contains_vocals)
+            x_is = spect.get_x()
+            y_is = spect.get_y()
 
-os.chdir(DIR) #Sets working directory to where song files are; this is so we can load them and write the dataset file in there
+            # I.e., how many samples did we make from the song (song length (sec)*2, since 500ms segments used)
+            n_song_samples = np.shape(y_is)[0]
 
-#The line below makes a list of all the filenames in the specified directory, while excluding names of subdirectories/folders
-filename_list = [name for name in os.listdir('.') if os.path.isfile(name)]
+            upper_index = n_samples_so_far + n_song_samples  # Each sample is a row in our array/matrix
 
-print('Processing songs from:'+DIR)
+            self.X[n_samples_so_far:upper_index, :, :] = x_is
+            self.Y[n_samples_so_far:upper_index] = y_is
 
-#########################################
-#For test set, n_samples = 24505
-#For training set, n_samples = 46200
-freq_size = 513
-time_size = 23
-n_samples = 24505
-#These are dimensions of the matrix [X, Y]
-#########################################
+            n_samples_so_far = n_samples_so_far + n_song_samples  # Updates how many samples we've done so far
 
-X = np.zeros((n_samples,freq_size,time_size))
-Y = np.zeros((n_samples))
-n_samples_so_far = 0 #This will ensure we are indexing correctly to put the x for our sample into our X matrix of all songs' data
+    def get_x(self):
+        return self.X
 
-for i in range(1,len(filename_list)):
-        filename = filename_list[i]; #Iterates through each file name in the list
-        
-        print(filename)
-        
-        contains_vocals = 0; #If the songs are instrumental/karaoke, it should be 0; if it has vocals, value should be 1
-        spect = Spectrogram(filename,contains_vocals) #Calling the Spectrogram class. This is what creates/updates our dataset textfile
-        x_is = spect.get_X() #numpy array data type
-        y_is = spect.get_Y() #numpy array data type
-        
-        n_song_samples = np.shape(y_is)[0] #I.e., how many samples did we make from the song (song length (sec)*2, since 500ms segments used)
-        
-        upper_index = n_samples_so_far + n_song_samples #Each sample is a row in our array/matrix
-        
-        X[n_samples_so_far:upper_index,:,:] = x_is #Puts in values of samples from song into the matrix [X,Y] of all samples
-        Y[n_samples_so_far:upper_index] = y_is #^^^
-        
-        n_samples_so_far = n_samples_so_far + n_song_samples #Updates how many samples we've done so far
-
+    def get_y(self):
+        return self.Y
