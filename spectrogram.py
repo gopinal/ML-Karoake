@@ -24,7 +24,8 @@ class Spectrogram:
         # sample_rate is an integer, denoting the sampling frequency in Hz of the song (i.e. the time resolution of the
         # song_data). song_data is an n-column array, where rows represent signal amplitude at a unit of time,
         # and each column represents a channel. For stereo songs there are two channels, hence two columns. For ease of
-        # processing, we'll turn stereo songs into mono songs:
+        # processing, we'll turn
+        # stereo songs into mono songs:
         if self.song_data.shape[1] > 1:
             song_data = (self.song_data[:, 0] +
                          self.song_data[:, 1]) / 2  # Averages out each channel in stereo song into a mono channel
