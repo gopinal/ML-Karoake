@@ -8,7 +8,7 @@
 # https://www.geeksforgeeks.org/rename-multiple-files-using-python/
 
 from spectrogram import Spectrogram
-import os.path
+import os, os.path
 import numpy as np
 
 
@@ -30,11 +30,11 @@ class Gendataset:
         n_samples = 24505
         # These are dimensions of the matrix [X, Y]
 
-        self.X = np.zeros((n_samples, freq_size, time_size))
-        self.Y = np.zeros(n_samples)
+        self.X = np.zeros((n_samples, freq_size, time_size), dtype=int)
+        self.Y = np.zeros(n_samples, dtype=int)
         # This will ensure we are indexing correctly to put the x for our sample into our X matrix of all songs' data
         n_samples_so_far = 0
-        for i in range(1, len(self.filename_list)):
+        for i in range(len(self.filename_list)):
             filename = self.filename_list[i]  # Iterates through each file name in the list
             print(filename)
 
@@ -52,9 +52,3 @@ class Gendataset:
             self.Y[n_samples_so_far:upper_index] = y_is
 
             n_samples_so_far = n_samples_so_far + n_song_samples  # Updates how many samples we've done so far
-
-    def get_x(self):
-        return self.X
-
-    def get_y(self):
-        return self.Y
