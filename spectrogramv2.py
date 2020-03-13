@@ -1,9 +1,3 @@
-
-# coding: utf-8
-
-# In[70]:
-
-
 # Importing libraries we'll need to make spectrograms--all are available with Anaconda3 installation except soundfile
 import numpy as np
 import matplotlib.pyplot as plt
@@ -37,16 +31,16 @@ class Spectrogram:
                          self.song_data[:, 1]) / 2  # Averages out each channel in stereo song into a mono channel
             # We want to segment our song files into individual examples of 500 ms; the following will
             # generate these examples:
-        seconds = song_data.shape[0]/self.sample_rate #Total number of seconds in song
-        n = int(seconds*2) #Number of examples we'll make, each 500 ms, from song data we loaded
+        seconds = song_data.shape[0] / self.sample_rate  # Total number of seconds in song
+        n = int(seconds * 2)  # Number of examples we'll make, each 500 ms, from song data we loaded
 
-        pxl_per_samp = round(song_data.shape[0]/(seconds*2)) #Pixels per sample--think of our data as an image
-       
-        song_array = np.zeros(shape=(n,pxl_per_samp))
-             
-        for i in range(0,(n-1)):
-            song_array[i,:] = song_data[i*pxl_per_samp:(i+1)*pxl_per_samp]
-            
+        pxl_per_samp = round(song_data.shape[0] / (seconds * 2))  # Pixels per sample--think of our data as an image
+
+        song_array = np.zeros(shape=(n, pxl_per_samp))
+
+        for i in range(0, (n - 1)):
+            song_array[i, :] = song_data[i * pxl_per_samp:(i + 1) * pxl_per_samp]
+
         # Scipy methods for doing (inverse) short-time fourier transforms, or STFT,
         # (that is to reproduce our song from STFT)
         L = 1024
@@ -66,7 +60,7 @@ class Spectrogram:
         # model. It also includes y values for the corresponding examples by reading the file name of song we
         # imported to get this data
         self.data_array = None
-        
+
         if self.contains_vocals:
             # If examples come from a song with vocals (y = 1)
             self.data_array = np.ones((spec_exmpl_array.shape[0], spec_exmpl_array.shape[1] + 1))
@@ -75,34 +69,16 @@ class Spectrogram:
             self.data_array = np.zeros((spec_exmpl_array.shape[0], spec_exmpl_array.shape[1] + 1))
 
         self.data_array[:, :-1] = spec_exmpl_array  # Now data_array is our X with the y column attached at the end
-        
-    def get_X(self):
-        # To feed into a neural network, we'd use:
-        self.X = self.data_array[:, :-1]
-        return (self.X)
-    
-    def get_Y(self):
-        # To feed into a neural network, we'd use:
-        self.Y = self.data_array[:, self.data_array.shape[1] - 1]
-        return (self.Y)   
-        
-        ###The following was used for generating and reading text files with unrolled STFT data###
-            
-    #   data_array[:, :-1] = spec_exmpl_array  # Now data_array is our X with the y column attached at the end
-    #   filename = audio_file
-    #   with open(filename, mode='w') as data_file: #mode='a' is for appending to a text file, 'w' overwrites existing files
-    #       np.savetxt(data_file, data_array)
 
-    #def get_X_Y(self):
-    #    # Read the array we stored in the textfile
-    #    with open(filename, mode='r') as data_file:  # Mode 'r' is for reading
-    #        loaded_data_array = np.loadtxt(data_file)
-    #    # To feed into a neural network, we'd use:
-    #    self.X = loaded_data_array[:, :-1]
-    #    self.y = loaded_data_array[:, loaded_data_array.shape[1] - 1]
-    #    return (self.X,self.y)
+    def get_x(self):
+        # To feed into a neural network, we'd use:
+        x = self.data_array[:, :-1]
+        return x
 
-        ###END###
+    def get_y(self):
+        # To feed into a neural network, we'd use:
+        y = self.data_array[:, self.data_array.shape[1] - 1]
+        return y
 
     def plot_spectrogram(self):
         plt.pcolormesh(self.t, self.f, np.abs(self.spec), vmin=0, vmax=abs(np.amax(self.spec)))  # cmap='gray')
@@ -114,7 +90,6 @@ class Spectrogram:
         plt.xlabel('Time [sec]')
         plt.yscale('symlog', linthreshy=300)
         plt.show()
-        return
 
     # Plots the fourier transform of the whole song snippet
     def plot_fourier(self):
@@ -134,7 +109,6 @@ class Spectrogram:
         plt.ylabel('Amplitude')
         plt.xscale('log')
         plt.show()
-        return
 
     def plot_signal(self):
         ts = self.song_data
@@ -147,9 +121,6 @@ class Spectrogram:
         plt.ylabel("Amplitude")
         plt.xlabel("Time (second)")
         plt.title(
-            "The total length of time series = {} sec, sample_rate = {}".format(len(ts) / self.sample_rate, self.sample_rate))
+            "The total length of time series = {} sec, sample_rate = {}".format(len(ts) / self.sample_rate,
+                                                                                self.sample_rate))
         plt.show()
-        return
-
-
-
