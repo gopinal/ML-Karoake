@@ -30,8 +30,8 @@ class Gendataset:
         self.n_samples = n_samples
         # These are dimensions of the matrix [X, Y]
 
-        self.X = np.zeros((self.n_samples, freq_size, time_size), dtype=int)
-        self.Y = np.zeros(self.n_samples, dtype=int)
+        self.X = np.zeros((self.n_samples, freq_size, time_size,1), dtype=int)
+        self.Y = np.zeros((self.n_samples,1), dtype=int)
         # This will ensure we are indexing correctly to put the x for our sample into our X matrix of all songs' data
         n_samples_so_far = 0
         for i in range(len(self.filename_list)):
@@ -42,15 +42,16 @@ class Gendataset:
             spect = Spectrogram(filename, contains_vocals)
             x_is = spect.get_X()
             y_is = spect.get_Y()
-#             print("x_is"+str(x_is.shape))
-#             print("y_is"+str(y_is.shape))
-#             print("samples so far "+str(n_samples_so_far))
-            # I.e., how many samples did we make from the song (song length (sec)*2, since 500ms segments used)
-            n_song_samples = np.shape(y_is)[0]
+            #print("x_is"+str(x_is.shape))
+            #print("y_is"+str(y_is.shape))
+            #print("samples so far "+str(n_samples_so_far))
+            
+            n_song_samples = np.shape(y_is)[0] # I.e., how many samples did we make from the song
+                                               # (song length (sec)*2, since 500ms segments used)
 
             upper_index = n_samples_so_far + n_song_samples  # Each sample is a row in our array/matrix
-#             print("upper index "+str(upper_index))
-            self.X[n_samples_so_far:upper_index, :, :] = x_is
-            self.Y[n_samples_so_far:upper_index] = y_is
+            #print("upper index "+str(upper_index))
+            self.X[n_samples_so_far:upper_index, :, :,:] = x_is
+            self.Y[n_samples_so_far:upper_index,:] = y_is
 
             n_samples_so_far = n_samples_so_far + n_song_samples  # Updates how many samples we've done so far

@@ -61,6 +61,8 @@ class Spectrogram:
         for i in range(0, (self.n - 1)):
             _, _, self.spec = signal.stft(song_array[i, :], fs=self.sample_rate, nperseg=L, noverlap=noverlap)
             self.spec_exmpl_3D_array[i,:,:] = self.spec
+            
+        self.spec_exmpl_3D_array = self.spec_exmpl_3D_array.reshape(self.spec_exmpl_3D_array.shape[0],self.spec_exmpl_3D_array.shape[1],self.spec_exmpl_3D_array.shape[2],-1)
         #spec is an array of dimensions (len(f), len(t)), the rows being along the frequency axis
         
         # f is a list containing the frequencies that will be plotted, size of 513 with L = 1024 and hop size = 256
@@ -103,10 +105,10 @@ class Spectrogram:
         data_array = None
         if self.contains_vocals:
             # If examples come from a song with vocals (y = 1)
-            self.Y = np.ones(self.n,1)
+            self.Y = np.ones((self.n,1))
         else:
             # If examples come from a song with no vocals (y = 0)
-            self.Y = np.zeros(self.n,1)   
+            self.Y = np.zeros((self.n,1))  
 
         return (self.Y)   
 
